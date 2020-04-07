@@ -26,7 +26,7 @@ router.post("/", (req, res) => {
 router.get("/:id", (req, res) => {
   method.findById(req.params.id)
   .then(message => {
-    if(message) {
+    if(message.length > 0) {
       res.status(200).json(message)
     } else {
       res.status(404).json({errorMessage: "The post with the specified ID does not exist."})
@@ -46,15 +46,18 @@ router.put("/:id", (req, res) => {
     res.status(400).json({ errorMessage: "Please provide title and contents for the post." })
   } else {
     method.update(id, changes)
-    .then(count => {
-      if(count) {
+    .then(change => {
+      if(change) {
         method.findById(id)
         .then(post => {
           res.status(200).json(post)
         })
-        .catch(() => {
-          res.status(404).json({ errorMessage: "The post with the specified ID does not exist." });
+        .catch(err => {
+          console.log(err)
+          res.status(500).json({ errorMessage: "The post information could not be modified." })
         })
+      } else {
+        res.status(404).json({ errorMessage: "The post with the specified ID does not exist." });
       }
     })
     .catch(err => {
@@ -80,35 +83,54 @@ router.delete("/:id", (req, res) => {
 })
 
 router.get("/:id/comments", (req, res) => {
-  method.findPostComments(req.params.id)
-  .then(comments => {
-    if(comments) {
-      res.status(200).json(comments)
+  method.findById(req.params.id)
+  .then(response => {
+    if(response.length > 0) {
+      method.findPostComments(req.params.id)
+      .then(comments => res.status(200).json(comments))
+      .catch(err => {
+        console.log(err)
+        res.status(500).json({ errorMessage: "The comments information could not be retrieved." })
+      })
     } else {
-      res.status(500).json({ errorMessage: "The comments information could not be retrieved." })
+      res.status(404).json({ errorMessage: "The post with the specified ID does not exist." })
     }
-  })
-  .catch(err => {
-    console.log(err)
-    res.status(404).json({ errorMessage: "The post with the specified ID does not exist." })
   })
 })
 
 router.post("/:id/comments", (req, res) => {
-  if(method.findCommentById(req.params.id)) {
-    if(req.body.text != "") {
-      method.insertComment(req.body)
-      .then(() => {
-        res.status(201).json({ successMessage: "Successfully inserted comment" })
-      })
-      .catch(() => res.status(500).json({ errorMessage: "Something went wrong adding the comment."}))
+  if(req.body.text !== "") {
+    method.findCommentById(req.params.id)
+    .then(comment => {
+      console.log(comment)
+      req.body.post_id = req.params.id
 
-    } else {
-      res.status(400).json({ errorMessage: "Please provide text for the comment."})
-    }
+      if(comment.length === 1) {
+        method.insertComment(req.body)
+        .then(i => {
+          res.status(201).json({ successMessage: "Successfully inserted comment", data: req.body })
+        })
+        .catch(() => res.status(500).json({ errorMessage: "There was an error while saving the comment to the database"}))
+      }
+    })
+    .catch(() => res.status(500).json({ errorMessage: "Something went wrong adding the comment."}))
   } else {
-    res.status(400).json({ errorMessage: "The post with the specified ID does not exist." })
+    res.status(400).json({ errorMessage: "Please provide text for the comment."})
   }
+
+  //   if(req.body.text != "") {
+  //     method.insertComment(req.body)
+  //     .then(() => {
+  //       res.status(201).json({ successMessage: "Successfully inserted comment" })
+  //     })
+  //     .catch(() => res.status(500).json({ errorMessage: "Something went wrong adding the comment."}))
+
+  //   } else {
+  //     res.status(400).json({ errorMessage: "Please provide text for the comment."})
+  //   }
+  // } else {
+  //   res.status(404).json({ errorMessage: "The post with the specified ID does not exist." })
+  // }
 })
 
 // get     /api/posts                 x
