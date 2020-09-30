@@ -1,8 +1,8 @@
-const express = require("express");
+const express = require('express');
 const server = express();
 server.use(express.json());
 
-const postsRouter = require("./hubs/postsRouter");
+const postsRouter = require("./hubs/postRouter");
 server.use("/api/posts", postsRouter);
 
 server.get("/", (req, res) => {
